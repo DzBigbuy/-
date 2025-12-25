@@ -2172,7 +2172,9 @@
             price,
             advertiserName,
             type,
+            // نحتفظ بالحقلين معًا ليتوافقا مع أي قواعد تستخدم ownerUid أو userId
             ownerUid: currentUser.uid,
+            userId: currentUser.uid,
             ownerEmail: currentUserProfile.email,
             ownerName: currentUserProfile.name,
             ownerRole: currentUserProfile.role,
@@ -2187,7 +2189,8 @@
           showNotification("تم نشر الإعلان بنجاح.", "success");
         } catch (err) {
           console.error(err);
-          showNotification("تعذر نشر الإعلان.", "error");
+          const msg = err && err.code ? `تعذر نشر الإعلان. (الرمز: ${err.code})` : "تعذر نشر الإعلان.";
+          showNotification(msg, "error");
         }
       });
 
