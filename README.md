@@ -1488,19 +1488,35 @@
     // 5) منطق Firebase: المستخدمون
     // =======================
     function updateAuthUI() {
-      if (currentUser && currentUserProfile) {
+      // نعتبر أن المستخدم مسجّل دخول إذا كان currentUser موجودًا، حتى لو فشل تحميل ملفه من Firestore
+      if (currentUser) {
+        // إظهار أزرار حسابي
         showAccountBtn.classList.remove("hidden");
         showAccountMobile.classList.remove("hidden");
         showAccountMobileMenu.classList.remove("hidden");
 
+        // إخفاء أزرار التسجيل
         showRegisterBtn.classList.add("hidden");
         showRegisterMobile.classList.add("hidden");
         showRegisterMobileMenu.classList.add("hidden");
 
-        userWelcome.classList.remove("hidden");
-        userWelcome.textContent = `مرحبا، ${currentUserProfile.name} (${currentUserProfile.role})`;
+        // نص الترحيب: يعتمد على ملف المستخدم إن توفر، وإلا نستخدم البريد فقط
+        if (currentUserProfile) {
+          userWelcome.classList.remove("hidden");
+          userWelcome.textContent = `مرحبا، ${currentUserProfile.name} (${currentUserProfile.role})`;
+        } else if (currentUser.email) {
+          userWelcome.classList.remove("hidden");
+          userWelcome.textContent = currentUser.email;
+        } else {
+          userWelcome.classList.add("hidden");
+          userWelcome.textContent = "";
+        }
 
-        if (currentUserProfile.email === ADMIN_EMAIL || currentUserProfile.role === "مدير") {
+        // صلاحيات المدير: تعتمد على ملف المستخدم إن توفر، أو على بريد ADMIN_EMAIL مباشرة
+        if (
+          (currentUserProfile && (currentUserProfile.email === ADMIN_EMAIL || currentUserProfile.role === "مدير")) ||
+          (!currentUserProfile && currentUser.email === ADMIN_EMAIL)
+        ) {
           showAdminViewBtn.classList.remove("hidden");
           showAdminViewMobile.classList.remove("hidden");
         } else {
@@ -1508,6 +1524,7 @@
           showAdminViewMobile.classList.add("hidden");
         }
       } else {
+        // في حال عدم وجود مستخدم مسجّل
         showAccountBtn.classList.add("hidden");
         showAccountMobile.classList.add("hidden");
         showAccountMobileMenu.classList.add("hidden");
@@ -1564,7 +1581,17 @@
       }
       loadCurrentUserProfile(user).catch((err) => {
         console.error(err);
-        showNotification("حدث خطأ أثناء تحميل بيانات الحساب.", "error");
+        // إذا فشل تحميل ملف المستخدم من Firestore (غالبًا بسبب Rules)، ننشئ ملفًا افتراضيًا
+        currentUserProfile = {
+          id: user.uid,
+          name: user.email ? user.email.split("@")[0] : "مستخدم",
+          email: user.email || "",
+          role: "تاجر",
+        };
+        showNotification("تم تسجيل الدخول، لكن تعذر تحميل بيانات الحساب من قاعدة البيانات. تأكد من إعدادات Firestore.", "warning");
+        updateAuthUI();
+        renderAccount();
+        renderAdminData();
       });
     });
 
